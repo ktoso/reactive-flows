@@ -16,23 +16,39 @@
 
 package de.heikoseeberger.reactiveflows
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props, SupervisorStrategy, Terminated }
+import akka.actor.{ Actor, ActorLogging, ActorPath, ActorRef, Address, Props, RootActorPath, SupervisorStrategy, Terminated }
 import akka.contrib.datareplication.DataReplication
 import akka.contrib.pattern.DistributedPubSubExtension
+import akka.persistence.journal.leveldb.{ SharedLeveldbJournal, SharedLeveldbStore }
+import java.nio.file.{ Paths, Files }
 
 object ReactiveFlows {
 
   final val Name = "reactive-flows"
 
-  def props = Props(new ReactiveFlows)
+  final val SharedJournal = "shared-journal"
+
+  def props(runSharedJournal: Boolean) = Props(new ReactiveFlows(runSharedJournal))
+
+  def sharedJournal(address: Address): ActorPath = RootActorPath(address) / "user" / Name / SharedJournal
 }
 
-class ReactiveFlows extends Actor with ActorLogging with SettingsActor {
+class ReactiveFlows(runSharedJournal: Boolean) extends Actor with ActorLogging with SettingsActor {
+
+  import ReactiveFlows._
 
   override val supervisorStrategy = SupervisorStrategy.stoppingStrategy
 
   private val flowFacade = context.watch(createFlowFacade())
 
+  if (runSharedJournal) {
+    deleteDir(Paths.get(
+      context.system.settings.config.getString("akka.persistence.journal.leveldb-shared.store.dir")
+    ))
+    val sharedJournal = context.watch(context.actorOf(Props(new SharedLeveldbStore), SharedJournal))
+    SharedLeveldbJournal.setStore(sharedJournal, context.system)
+  }
+  context.watch(context.actorOf(SharedJournalSetter.props, SharedJournalSetter.Name))
   context.watch(createHttpService(flowFacade))
 
   override def receive = {

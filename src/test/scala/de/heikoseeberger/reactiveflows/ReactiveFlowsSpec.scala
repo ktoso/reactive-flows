@@ -36,7 +36,7 @@ class ReactiveFlowsSpec extends BaseAkkaSpec {
         }
       })
       val delegate = TestProbe()
-      val reaper = actor(new ReactiveFlows {
+      val reaper = actor(new ReactiveFlows(false) {
         override protected def createFlowFacade() = flowFacade
         override protected def createHttpService(flowFacade: ActorRef) = httpService
         override protected def shutdown(actor: ActorRef) = delegate.ref ! "shutdown"

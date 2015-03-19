@@ -16,6 +16,10 @@
 
 package de.heikoseeberger
 
+import java.io.IOException
+import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.{ SimpleFileVisitor, Files, Path }
+
 package object reactiveflows {
 
   val Traversable = scala.collection.immutable.Traversable
@@ -29,4 +33,16 @@ package object reactiveflows {
 
   val IndexedSeq = scala.collection.immutable.IndexedSeq
   type IndexedSeq[+A] = scala.collection.immutable.IndexedSeq[A]
+
+  def deleteDir(dir: Path): Unit =
+    Files.walkFileTree(dir, new SimpleFileVisitor[Path] {
+      override def visitFile(file: Path, attrs: BasicFileAttributes) = {
+        Files.delete(file)
+        super.visitFile(file, attrs)
+      }
+      override def postVisitDirectory(dir: Path, e: IOException) = {
+        Files.delete(dir)
+        super.postVisitDirectory(dir, e)
+      }
+    })
 }
