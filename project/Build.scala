@@ -33,7 +33,8 @@ object Build extends AutoPlugin {
       unmanagedSourceDirectories.in(Compile) := List(scalaSource.in(Compile).value),
       unmanagedSourceDirectories.in(Test) := List(scalaSource.in(Test).value),
       unmanagedSourceDirectories.in(MultiJvm) := List(scalaSource.in(MultiJvm).value),
-      resolvers ++= List("hseeberger", "patriknw").map(Resolver.bintrayRepo(_, "maven"))
+      resolvers ++= List("hseeberger", "patriknw").map(Resolver.bintrayRepo(_, "maven")),
+      resolvers += "typesafe-releases" at "http://repo.typesafe.com/typesafe/maven-releases" // for conductr-bundle-lib
     ) ++
     // Scalariform settings
     SbtScalariform.scalariformSettings ++

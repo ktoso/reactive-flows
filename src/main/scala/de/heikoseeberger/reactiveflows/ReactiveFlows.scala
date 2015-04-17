@@ -19,6 +19,7 @@ package de.heikoseeberger.reactiveflows
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props, SupervisorStrategy, Terminated }
 import akka.contrib.datareplication.DataReplication
 import akka.contrib.pattern.DistributedPubSubExtension
+import com.typesafe.conductr.bundlelib.akka.{ ImplicitConnectionContext, StatusService }
 
 object ReactiveFlows {
 
@@ -27,12 +28,19 @@ object ReactiveFlows {
   def props = Props(new ReactiveFlows)
 }
 
-class ReactiveFlows extends Actor with ActorLogging with SettingsActor {
+class ReactiveFlows extends Actor with ActorLogging with SettingsActor with ImplicitConnectionContext {
+
+  import context.dispatcher
 
   override val supervisorStrategy = SupervisorStrategy.stoppingStrategy
 
   context.watch(createHttpService(context.watch(createFlowFacade())))
   context.watch(context.actorOf(SharedJournalManager.props, SharedJournalManager.Name))
+  StatusService.signalStarted().onFailure {
+    case _ =>
+      log.error("Couldn't signal started!")
+      context.system.shutdown()
+  }
 
   override def receive = {
     case Terminated(actor) => onTerminated(actor)

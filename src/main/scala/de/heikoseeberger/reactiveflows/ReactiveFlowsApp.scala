@@ -20,6 +20,8 @@ import akka.actor.ActorSystem
 import akka.cluster.Cluster
 import akka.contrib.pattern.DistributedPubSubExtension
 import akka.event.Logging
+import com.typesafe.conductr.bundlelib.akka.Env
+import com.typesafe.config.ConfigFactory
 
 object ReactiveFlowsApp {
 
@@ -28,7 +30,9 @@ object ReactiveFlowsApp {
   def main(args: Array[String]): Unit = {
     for (jvmArg(name, value) <- args) System.setProperty(name, value)
 
-    val system = ActorSystem("reactive-flows-system")
+    val name = sys.env.getOrElse("BUNDLE_SYSTEM", "reactive-flows-system")
+    val config = Env.asConfig.withFallback(ConfigFactory.load())
+    val system = ActorSystem(name, config)
     Cluster(system).registerOnMemberUp {
       FlowFacade.startSharding(
         system,
